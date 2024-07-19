@@ -2,25 +2,27 @@ const input = document.querySelector('.form__input');
 const box = document.querySelector('.box');
 const menu = document.querySelector('.list');
 const listChild = menu.children;
+let fragment = document.createDocumentFragment();
 let repos;
 
 input.addEventListener(
-    'keyup',
-    debounce(function () {
-        getRequest(input.value);
+    'input',
+    debounce(function (evt) {
+        // console.log(evt.target.value);
+        getRequest(evt.target.value, 5);
     }, 400)
 );
 
-async function getRequest(value) {
+async function getRequest(value, limit) {
     try {
         if (value.trim() === '') return deletElem();
 
         deletElem();
         const data = await fetch(
-            `https://api.github.com/search/repositories?q=${value}`
+            `https://api.github.com/search/repositories?q=${value}&per_page=${limit}`
         );
         const result = await data.json();
-        repos = result.items.slice(0, 5);
+        repos = result.items;
         return createElem(repos);
     } catch {
         (err) => console.log(err);
@@ -44,8 +46,9 @@ function createElem(repos) {
         let list = document.createElement('li');
         list.classList.add('list__item');
         list.textContent = item.name;
-        menu.appendChild(list);
+        fragment.appendChild(list);
     });
+    menu.appendChild(fragment);
 }
 
 function deletElem() {
@@ -57,31 +60,44 @@ function deletElem() {
 menu.addEventListener('click', (evt) => {
     const name = evt.target.textContent;
     const elem = repos.find((item) => item.name === name);
-    fillBox(elem);
+    createBox(elem);
 });
 
-function fillBox(elem) {
-    const { name, owner, stargazers_count } = elem;
-
+function createBox(elem) {
     const itemBox = document.createElement('div');
     itemBox.classList.add('box__item');
-    itemBox.insertAdjacentHTML(
-        'beforeend',
-        `<div class="box__info">
-            <div class="box__name">Name: ${name}</div>
-            <div class="box__owner">Owner: ${owner.login}</div>
-            <div class="box__stars">Stars: ${stargazers_count}</div>
-        </div>`
-    );
+
+    itemBox.append(createItemInfo(elem));
 
     const btn = document.createElement('button');
     btn.classList.add('box__btn');
-    itemBox.appendChild(btn);
+    itemBox.append(btn);
 
     btn.addEventListener('click', () => {
         itemBox.remove();
     });
-    box.appendChild(itemBox);
+
+    box.append(itemBox);
+
     input.value = '';
     deletElem();
+}
+
+function createItemInfo({ name, owner, stargazers_count }) {
+    const itemInfo = document.createElement('div');
+    itemInfo.classList.add('box__info');
+
+    const nameInfo = document.createElement('div');
+    nameInfo.textContent = 'Name: ' + name;
+
+    const ownerInfo = document.createElement('div');
+    ownerInfo.textContent = 'Owner: ' + owner.login;
+
+    const starsInfo = document.createElement('div');
+    starsInfo.textContent = 'Stars: ' + stargazers_count;
+
+    itemInfo.append(nameInfo);
+    itemInfo.append(ownerInfo);
+    itemInfo.append(starsInfo);
+    return itemInfo;
 }
